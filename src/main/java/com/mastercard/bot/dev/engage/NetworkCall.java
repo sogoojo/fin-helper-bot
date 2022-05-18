@@ -1,5 +1,7 @@
 package com.mastercard.bot.dev.engage;
 
+import com.microsoft.bot.integration.ClasspathPropertiesConfiguration;
+import com.microsoft.bot.integration.Configuration;
 import okhttp3.Call;
 import okhttp3.Credentials;
 import okhttp3.MediaType;
@@ -11,7 +13,8 @@ import okhttp3.ResponseBody;
 import org.json.JSONObject;
 
 import org.json.JSONArray;
-import org.springframework.beans.factory.annotation.Value;
+
+
 
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
@@ -21,20 +24,8 @@ import java.net.URL;
 
 public class NetworkCall {
 
-    @Value("${server.token:https://api-sandbox.aiia.eu/v1/oauth/token}")
-    private static String tokenUrl = "https://api-sandbox.aiia.eu/v1/oauth/token";
-    @Value("${server.redirect:http://localhost:3978/callback}")
-   // private static String redirect = "http://localhost:3978/callback";
-    private static String redirect = "https://fin-chatbot.azurewebsites.net/callback";
-
     static String jwtToken = "";
     static String code = "";
-
-    //private static final String client_Id = "aiiaengage-4f5ee715-7961-4070-b8fc-64db5e2d1aef";
-    //private static final String client_Secret = "de5abc986b4f23a44c4289ae6ac15d83213af1aeee2bed8b69b93fd09c850c62";
-
-    private static final String client_Id = "bankap-81d9ced0-f810-427f-8f4e-21765917c947";
-    private static final String client_Secret = "582acda4e0b764f94787f30cdcfe60a5e822162fe231cc1963dd9262a01700ce";
 
     public static String getAccounts() {
         try {
@@ -119,15 +110,18 @@ public class NetworkCall {
         return "Invalid";
     }
 
-    public static void onBoardToken(String ref_code) {
+    public static  void onBoardToken(String ref_code) {
+        Configuration withConfiguration = new ClasspathPropertiesConfiguration();
         try {
-
+            String redirectUrl = withConfiguration.getProperty("redirect");
+            String tokenUrl = withConfiguration.getProperty("tokenUrl");
+            String client_Id = withConfiguration.getProperty("client_Id");
+            String client_Secret = withConfiguration.getProperty("client_Secret");
             code = ref_code;
-            System.out.println("Code " + ref_code);
             JSONObject object = new JSONObject();
             object.put("grant_type", "authorization_code");
             object.put("code", ref_code);
-            object.put("redirect_uri", redirect);
+            object.put("redirect_uri", redirectUrl);
 
 
             MediaType JSON = MediaType.parse("application/json; charset=utf-8");
@@ -217,5 +211,4 @@ public class NetworkCall {
         }
         return stb.toString();
     }
-
 }

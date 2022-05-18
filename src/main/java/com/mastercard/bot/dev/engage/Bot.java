@@ -5,10 +5,10 @@ package com.mastercard.bot.dev.engage;
 
 import com.codepoetics.protonpack.collectors.CompletableFutures;
 import com.microsoft.bot.builder.ActivityHandler;
-import com.microsoft.bot.builder.ConversationState;
 import com.microsoft.bot.builder.MessageFactory;
 import com.microsoft.bot.builder.TurnContext;
-import com.microsoft.bot.builder.UserState;
+import com.microsoft.bot.integration.ClasspathPropertiesConfiguration;
+import com.microsoft.bot.integration.Configuration;
 import com.microsoft.bot.schema.ActionTypes;
 import com.microsoft.bot.schema.Activity;
 import com.microsoft.bot.schema.CardAction;
@@ -16,7 +16,7 @@ import com.microsoft.bot.schema.ChannelAccount;
 import com.microsoft.bot.schema.ConversationReference;
 import com.microsoft.bot.schema.SuggestedActions;
 import org.apache.commons.lang3.StringUtils;
-import org.springframework.beans.factory.annotation.Value;
+
 
 import java.util.Arrays;
 import java.util.List;
@@ -24,22 +24,17 @@ import java.util.concurrent.CompletableFuture;
 
 
 public class Bot extends ActivityHandler {
-    @Value("${server.port:3978}")
-    private int port;
+
 
     private final EngageRecognizer luisRecognizer;
-    private ConversationState conversationState;
-    private UserState userState;
 
 
-    static String baseurl = "https://api-sandbox.aiia.eu/v1/oauth/connect?";
-     //static String client_id = "aiiaengage-4f5ee715-7961-4070-b8fc-64db5e2d1aef";
-   // static String client_redirect_url ="http://localhost:3978/callback";
-     static String client_id = "bankap-81d9ced0-f810-427f-8f4e-21765917c947";
-      static String client_redirect_url = "https://fin-chatbot.azurewebsites.net/callback";
-            static String  location=  baseurl+"client_id="+client_id+"&scope=accounts%20offline_access%20payments:inbound%20payments:outbound&redirect_uri="+client_redirect_url+"&response_type=code";
-    static String accountOptions = "What would you like to view? \r\n Balance or last 5 Transactions?";
 
+    Configuration withConfiguration = new ClasspathPropertiesConfiguration();
+    String baseUrl = withConfiguration.getProperty("baseUrl");
+    String clientId = withConfiguration.getProperty("client_Id");
+    String redirectUrl = withConfiguration.getProperty("redirect");
+    String  location=  baseUrl+"client_id="+clientId+"&scope=accounts%20offline_access%20payments:inbound%20payments:outbound&redirect_uri="+redirectUrl+"&response_type=code";
 
     private final String welcomeMessage = "Welcome to aiia open banking chat bot \r\n Continue by linking account/s to the chat bot";
 
@@ -54,14 +49,11 @@ public class Bot extends ActivityHandler {
     protected CompletableFuture<Void> onMessageActivity(TurnContext turnContext) {
         addConversationReference(turnContext.getActivity());
 
-       // String text = turnContext.getActivity().getText().trim();
-
             return luisRecognizer.recognize(turnContext).thenCompose(luisResult -> {
 
               String returnValue = luisResult.getTopScoringIntent().intent;
                System.out.println("Return value from intent "+ returnValue);
               if(returnValue.equals("GetBalance")){
-
                   String accounts = NetworkCall.getAccounts();
                   if(accounts.equals("invalid response"))
                   {
@@ -73,7 +65,6 @@ public class Bot extends ActivityHandler {
                           .thenApply(result -> null);
                 }
               else if(returnValue.equals("GetTransaction")){
-                  System.out.println("Transactions was called");
                   String transactions = NetworkCall.getTransactions();
                   return turnContext
                           .sendActivity(MessageFactory.text(transactions))
@@ -81,7 +72,6 @@ public class Bot extends ActivityHandler {
                           .thenApply(result -> null);
               }
               else{
-
                   return turnContext.sendActivity(MessageFactory.text("Text not recognized, please try again")).thenApply(sendResult -> null);
               }
             });
@@ -118,7 +108,7 @@ public class Bot extends ActivityHandler {
     }
 
 
-    private static CompletableFuture<Void> welcomeCard(TurnContext turnContext){
+    private  CompletableFuture<Void> welcomeCard(TurnContext turnContext){
        Activity reply = MessageFactory.text("");
        CardAction welcomeDetails = new CardAction();
        welcomeDetails.setDisplayText("Display Text");

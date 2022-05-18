@@ -44,6 +44,7 @@ public class NotifyController {
     private ConversationReferences conversationReferences;
     private String appId;
 
+
     @Autowired
     public NotifyController(
         BotFrameworkHttpAdapter withAdapter,
