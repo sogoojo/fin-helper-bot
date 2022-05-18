@@ -6,9 +6,7 @@ package com.mastercard.bot.dev.engage;
 import com.codepoetics.protonpack.collectors.CompletableFutures;
 import com.microsoft.bot.builder.ActivityHandler;
 import com.microsoft.bot.builder.ConversationState;
-import com.microsoft.bot.builder.IntentScore;
 import com.microsoft.bot.builder.MessageFactory;
-import com.microsoft.bot.builder.StatePropertyAccessor;
 import com.microsoft.bot.builder.TurnContext;
 import com.microsoft.bot.builder.UserState;
 import com.microsoft.bot.schema.ActionTypes;
@@ -18,11 +16,8 @@ import com.microsoft.bot.schema.ChannelAccount;
 import com.microsoft.bot.schema.ConversationReference;
 import com.microsoft.bot.schema.SuggestedActions;
 import org.apache.commons.lang3.StringUtils;
-import org.json.JSONArray;
-import org.json.JSONObject;
 import org.springframework.beans.factory.annotation.Value;
 
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
@@ -38,8 +33,10 @@ public class Bot extends ActivityHandler {
 
 
     static String baseurl = "https://api-sandbox.aiia.eu/v1/oauth/connect?";
-     static String client_id = "aiiaengage-4f5ee715-7961-4070-b8fc-64db5e2d1aef";
-    static String client_redirect_url ="http://localhost:3978/callback";
+     //static String client_id = "aiiaengage-4f5ee715-7961-4070-b8fc-64db5e2d1aef";
+   // static String client_redirect_url ="http://localhost:3978/callback";
+     static String client_id = "bankap-81d9ced0-f810-427f-8f4e-21765917c947";
+      static String client_redirect_url = "https://fin-chatbot.azurewebsites.net/callback";
             static String  location=  baseurl+"client_id="+client_id+"&scope=accounts%20offline_access%20payments:inbound%20payments:outbound&redirect_uri="+client_redirect_url+"&response_type=code";
     static String accountOptions = "What would you like to view? \r\n Balance or last 5 Transactions?";
 
