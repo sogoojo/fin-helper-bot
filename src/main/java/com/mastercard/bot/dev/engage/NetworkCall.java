@@ -20,13 +20,14 @@ import java.io.BufferedReader;
 import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.util.HashMap;
 
 
 public class NetworkCall {
 
     static String jwtToken = "";
     static String code = "";
-
+    static HashMap<String, String> map = new HashMap();
     public static String getAccounts() {
         try {
             OkHttpClient client = new OkHttpClient();
@@ -51,40 +52,36 @@ public class NetworkCall {
         return "invalid response";
     }
 
-    public static String makePost() {
 
+
+    public static String getAccountList(){
         try {
-            URL url = new URL("https://api-sandbox.aiia.eu/v1/accounts");
-            HttpURLConnection conn = (HttpURLConnection) url.openConnection();
-            conn.setRequestMethod("GET");
-            conn.setRequestProperty("Accept", "application/json");
+            OkHttpClient client = new OkHttpClient();
+            Request request = new Request.Builder()
+                    .url("https://api-sandbox.aiia.eu/v1/accounts")
+                    .addHeader("Accept", "application/json")
+                    .addHeader("Authorization", "Bearer " + jwtToken)
+                    .build();
 
-            conn.setRequestProperty("Authorization", "Bearer " + jwtToken);
-
-            if (conn.getResponseCode() != 200) {
-                throw new RuntimeException("Failed : HTTP error code : " + conn.getResponseCode());
+            Call call = client.newCall(request);
+            Response response = call.execute();
+            String retVal = pickAccounts(response.body().string());
+            int responseCode = response.code();
+            if (responseCode != 200) {
+                throw new RuntimeException("Failed : HTTP error code : " + responseCode);
             }
-            BufferedReader in = new BufferedReader(
-                    new InputStreamReader(conn.getInputStream()));
-            String inputLine;
-            StringBuffer content = new StringBuffer();
-            while ((inputLine = in.readLine()) != null) {
-                content.append(inputLine);
-            }
-            in.close();
-            return parseAccountData(content.toString());
+            response.close();
+            return retVal;
         } catch (Exception ex) {
             ex.printStackTrace();
         }
-        return "nothing to show";
+        return "invalid response";
     }
-
-
-    public static String getTransactions() {
-
+    public static String getTransactions(String accountName) {
         try {
-            System.out.println("Transactions from network call");
-            URL url = new URL("https://api-sandbox.aiia.eu/v1/accounts/MzViNjhkOGYtOGI2OC00YjIxLTk3MDctOTExZDBmMjhlMmI1fERLX1Rlc3RCYW5rfFJPS0huNkdXVEVzMHdCeng1d01zTEhiWVU2UXpXNHEyNEh2OVJuRmVsUUkuOWEzZDRhMDRjMmVm/transactions?pageSize=5");
+            String accountId = searchForAccount(accountName);
+            System.out.println("Transactions from network call " + accountId);
+            URL url = new URL("https://api-sandbox.aiia.eu/v1/accounts/"+accountId+"/transactions?pageSize=5");
             HttpURLConnection conn = (HttpURLConnection) url.openConnection();
             conn.setRequestMethod("GET");
             conn.setRequestProperty("Accept", "application/json");
@@ -181,15 +178,35 @@ public class NetworkCall {
         return stb.toString();
     }
 
+   private static String pickAccounts(String json) {
+        StringBuilder stb = new StringBuilder();
+        //clear hashmap
+       map.clear();
 
+       try{
+           JSONObject jsonObject = new JSONObject(json);
+           JSONArray jsonData = jsonObject.getJSONArray("accounts");
+           jsonData.iterator().forEachRemaining( element -> {
+               JSONObject newObject = new JSONObject(element.toString());
+               String accountId = newObject.getString("id");
+               String accountName = newObject.getString("name");
+               //store account details in hashmap
+               map.put(accountName, accountId);
+               // append account name and return to caller
+               stb.append(accountName);
+               stb.append(",");
+           });
+       } catch (Exception ex)
+       {
+           ex.printStackTrace();
+       }
+      return stb.toString();
+   }
 
     private static String parseAccountData(String json) {
         StringBuilder stb = new StringBuilder();
-
         try {
-
             JSONObject jsonObject = new JSONObject(json);
-
             JSONArray jsonData = jsonObject.getJSONArray("accounts");
             stb.append("Owner - "+jsonData.getJSONObject(0).get("owner"));
             stb.append("\r\n");
@@ -210,5 +227,9 @@ public class NetworkCall {
             ex.printStackTrace();
         }
         return stb.toString();
+    }
+
+    private static String searchForAccount(String accountName){
+        return map.get(accountName);
     }
 }

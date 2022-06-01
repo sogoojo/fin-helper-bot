@@ -18,9 +18,12 @@ import com.microsoft.bot.schema.SuggestedActions;
 import org.apache.commons.lang3.StringUtils;
 
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 
 public class Bot extends ActivityHandler {
@@ -36,7 +39,7 @@ public class Bot extends ActivityHandler {
     String redirectUrl = withConfiguration.getProperty("redirect");
     String  location=  baseUrl+"client_id="+clientId+"&scope=accounts%20offline_access%20payments:inbound%20payments:outbound&redirect_uri="+redirectUrl+"&response_type=code";
 
-    private final String welcomeMessage = "Welcome to aiia open banking chat bot \r\n Continue by linking account/s to the chat bot";
+    private final String welcomeMessage = "Welcome to Aiia open banking chat bot \r\n Continue by linking account/s to the chat bot";
 
     private ConversationReferences conversationReferences;
 
@@ -48,11 +51,17 @@ public class Bot extends ActivityHandler {
     @Override
     protected CompletableFuture<Void> onMessageActivity(TurnContext turnContext) {
         addConversationReference(turnContext.getActivity());
-
+        String activityMessage = turnContext.getActivity().getText();
+        if(activityMessage.equals("Checking Account") || activityMessage.equals("Direct Debit")){
+            String transactions = NetworkCall.getTransactions(turnContext.getActivity().getText());
+            return turnContext
+                    .sendActivity(MessageFactory.text(transactions))
+                    .thenCompose(resourceResponse -> homeActivity(turnContext))
+                    .thenApply(result -> null);
+        }
             return luisRecognizer.recognize(turnContext).thenCompose(luisResult -> {
 
               String returnValue = luisResult.getTopScoringIntent().intent;
-               System.out.println("Return value from intent "+ returnValue);
               if(returnValue.equals("GetBalance")){
                   String accounts = NetworkCall.getAccounts();
                   if(accounts.equals("invalid response"))
@@ -65,10 +74,10 @@ public class Bot extends ActivityHandler {
                           .thenApply(result -> null);
                 }
               else if(returnValue.equals("GetTransaction")){
-                  String transactions = NetworkCall.getTransactions();
+                  String transactions = NetworkCall.getAccountList();
                   return turnContext
-                          .sendActivity(MessageFactory.text(transactions))
-                          .thenCompose(resourceResponse -> homeActivity(turnContext))
+                          .sendActivity(MessageFactory.text("Seems you want to check your previous transactions."))
+                          .thenCompose(resourceResponse -> accountCard(turnContext, transactions))
                           .thenApply(result -> null);
               }
               else{
@@ -124,6 +133,25 @@ public class Bot extends ActivityHandler {
     private static CompletableFuture<Void> homeActivity(TurnContext turnContext)
     {
         return turnContext.sendActivity(MessageFactory.text("What would you like to do? ")).thenApply(sendResult -> null);
+    }
+
+    private CompletableFuture<Void> accountCard(TurnContext turnContext, String accounts){
+        Activity message = MessageFactory.text("Which account would you like to use ?");
+        List<String> accountList = Stream.of(accounts.split(",")).collect(Collectors.toList());
+
+        List<CardAction> cardActions = new ArrayList<>();
+        for (String account : accountList){
+            CardAction accountDetails = new CardAction();
+            accountDetails.setTitle(account);
+            accountDetails.setType(ActionTypes.IM_BACK);
+            accountDetails.setValue(account);
+            cardActions.add(accountDetails);
+        }
+
+       SuggestedActions actions = new SuggestedActions();
+       actions.setActions(cardActions);
+       message.setSuggestedActions(actions);
+       return turnContext.sendActivity(message).thenApply(sendResult -> null);
     }
 
 }

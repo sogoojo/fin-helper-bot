@@ -33,13 +33,7 @@ public class EngageRecognizer implements Recognizer {
         }
     }
 
-    public Boolean isConfigured(){
-        return this.recognizer !=null;
-    }
 
-    public CompletableFuture<RecognizerResult>executeLuisQuery(TurnContext context){
-        return this.recognizer.recognize(context);
-    }
 
 
     @Override
