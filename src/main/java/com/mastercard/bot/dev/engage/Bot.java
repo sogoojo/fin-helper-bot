@@ -16,6 +16,7 @@ import com.microsoft.bot.schema.ChannelAccount;
 import com.microsoft.bot.schema.ConversationReference;
 import com.microsoft.bot.schema.SuggestedActions;
 import org.apache.commons.lang3.StringUtils;
+import org.json.JSONObject;
 
 
 import java.util.ArrayList;
@@ -37,9 +38,9 @@ public class Bot extends ActivityHandler {
     String baseUrl = withConfiguration.getProperty("baseUrl");
     String clientId = withConfiguration.getProperty("client_Id");
     String redirectUrl = withConfiguration.getProperty("redirect");
-    String  location=  baseUrl+"client_id="+clientId+"&scope=accounts%20offline_access%20payments:inbound%20payments:outbound&redirect_uri="+redirectUrl+"&response_type=code";
+   // String  location=  baseUrl+"client_id="+clientId+"&scope=accounts%20offline_access%20payments:inbound%20payments:outbound&redirect_uri="+redirectUrl+"&response_type=code";
 
-    private final String welcomeMessage = "Welcome to Aiia open banking chat bot \r\n Continue by linking account/s to the chat bot";
+    private final String welcomeMessage = "Welcome to Finicity open banking chat bot \r\n Continue by linking account/s to the chat bot";
 
     private ConversationReferences conversationReferences;
 
@@ -52,7 +53,24 @@ public class Bot extends ActivityHandler {
     protected CompletableFuture<Void> onMessageActivity(TurnContext turnContext) {
         addConversationReference(turnContext.getActivity());
         String activityMessage = turnContext.getActivity().getText();
-        if(activityMessage.equals("Checking Account") || activityMessage.equals("Direct Debit")){
+        if(activityMessage.equals("balance")){
+
+            String accounts = FinicityNetwork.getAccounts();
+            return turnContext
+                    .sendActivity(MessageFactory.text(accounts))
+                    .thenCompose(resourceResponse -> homeActivity(turnContext))
+                    .thenApply(result -> null);
+
+        }
+        else if(activityMessage.equals("transaction")){
+            String transactions = FinicityNetwork.getTransactions();
+
+            return turnContext
+                    .sendActivity(MessageFactory.text(transactions))
+                    .thenCompose(resourceResponse -> homeActivity(turnContext))
+                    .thenApply(result -> null);
+        }
+/*        if(activityMessage.equals("Checking Account") || activityMessage.equals("Direct Debit")){
             String transactions = NetworkCall.getTransactions(turnContext.getActivity().getText());
             return turnContext
                     .sendActivity(MessageFactory.text(transactions))
@@ -83,7 +101,9 @@ public class Bot extends ActivityHandler {
               else{
                   return turnContext.sendActivity(MessageFactory.text("Text not recognized, please try again")).thenApply(sendResult -> null);
               }
-            });
+            });*/
+        return turnContext.sendActivity(MessageFactory.text("Text not recognized, please try again")).thenApply(sendResult -> null);
+
     }
 
     @Override
@@ -91,7 +111,7 @@ public class Bot extends ActivityHandler {
         List<ChannelAccount> membersAdded,
         TurnContext turnContext
     ) {
-
+        FinicityNetwork.getAccessToken();
         return membersAdded.stream()
             .filter(
                 // Greet anyone that was not the target (recipient) of this message.
@@ -118,6 +138,15 @@ public class Bot extends ActivityHandler {
 
 
     private  CompletableFuture<Void> welcomeCard(TurnContext turnContext){
+        String location = "";
+        try{
+          String response =  FinicityNetwork.generateUrl();
+         location = new JSONObject(response).getString("link");
+        }catch (Exception ex)
+        {
+            ex.printStackTrace();
+        }
+
        Activity reply = MessageFactory.text("");
        CardAction welcomeDetails = new CardAction();
        welcomeDetails.setDisplayText("Display Text");
